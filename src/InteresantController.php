@@ -15,9 +15,20 @@ class InteresantController
         $serializer = new Serializer();
         $repo = new InteresantRepo();
         $interesants = $repo->findAll();
-        var_dump($interesants);
-        return '';
+        $vars = [];
+        foreach ($interesants as $interesant){
+            $vars[] = $serializer->normalize($interesant);
+        }
+        return json_encode($vars);
     }
+    
+    public function formAction()
+    {
+        $serializer = new Serializer();
+        $interesant = new Interesant();
+        $select = $this->prepareSelectInteresant($interesant);
+        return json_encode($serializer->normalize($select));
+    }    
 
     public function addAction(Application $app, $id = null)
     {
@@ -190,6 +201,32 @@ class InteresantController
     public function validateInteresant($interesant)
     {
         return true;
+    }
+    
+    /**
+     * 
+     * @param Interesant $interesant
+     * @return Form\Select
+     */
+    public function prepareSelectInteresant($interesant)
+    {
+        $repo = new InteresantRepo();
+        $interesants = $repo->findAll();
+        $select = new Form\Select();
+        $select
+                ->setLabel('Select Interesant:')
+                ->setName('interesant[id]');
+        $options = [];
+        foreach ($interesants as $item) {
+            $option = new Form\Option();
+            $option
+                    ->setLabel($item->getName() ? $item->getName() :  $item->getFirstName() . $item->getLastName())
+                    ->setValue($item->getId())
+                    ->setSelected($item->getId() === $interesant->getId());
+            $options[] = $option;
+        }
+        $select->setOptions($options);
+        return $select;
     }
 
 }

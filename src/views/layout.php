@@ -7,7 +7,7 @@ and open the template in the editor.
 <html>
     <head>
         <meta charset="UTF-8">
-        <title> <?php $view['slots']->output('title', 'Default title') ?></title>
+        <title> <?php $view['slots']->output('title', 'Interesant') ?></title>
         <script src="/js/jquery-1.12.4.min.js" type="text/javascript"></script>
         <script src="/js/jquery-ui.min.js" type="text/javascript" ></script>
 
