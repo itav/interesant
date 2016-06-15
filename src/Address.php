@@ -7,6 +7,8 @@ class Address
 
     const TYPE_MAIN = 1;
     const TYPE_POST = 2;
+    const TYPE_OTHER = 3;
+    
     const STATUS_ACTIVE = 1;
     const STATUS_DELETED = 2;
 

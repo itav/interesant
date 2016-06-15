@@ -15,17 +15,19 @@ class Interesant
     private $type;
     private $firstName;
     private $lastName;
+
     /**
      *
      * @var Address[]
      */
     private $addresses;
     private $ten;
+    private $bankAccount;
     private $status;
 
     public function __construct()
     {
-        $this->id =  uniqid();
+        $this->id = uniqid();
         $this->type = self::TYPE_PRIVATE;
         $this->status = self::STATUS_ACTIVE;
     }
@@ -101,6 +103,30 @@ class Interesant
         return $this;
     }
 
+    public function addAddress($address, $index = null)
+    {
+        if (!$index) {
+            $this->addresses[] = $address;
+            return $this;
+        }
+        $this->addresses[$index] = $address;
+        return $this;
+    }
+
+    public function delAddress($index)
+    {
+        if (array_key_exists($index, $this->addresses)) {
+            unset($this->addresses[$index]);
+        }
+        return $this;
+    }
+
+    public function reindexAddresses()
+    {
+        $this->addresses = array_values($this->addresses);
+        return $this;
+    }
+
     public function setTen($ten)
     {
         $this->ten = $ten;
@@ -117,5 +143,17 @@ class Interesant
         $this->status = $status;
         return $this;
     }
+
+    public function getBankAccount()
+    {
+        return $this->bankAccount;
+    }
+
+    public function setBankAccount($bankAccount)
+    {
+        $this->bankAccount = $bankAccount;
+        return $this;
+    }
+
 
 }

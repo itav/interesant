@@ -7,45 +7,37 @@ use Itav\Component\Serializer\Serializer;
 class InteresantRepo
 {
 
-    private $file = __DIR__ . '/storage/interesant.csv';
-    private $fileOld = __DIR__ . '/storage/interesant.csv.old';
-    private $fileTemp = __DIR__ . '/storage/interesant.csv.temp';
+    private $file = __DIR__ . '/storage/interesant.json';
+    private $serializer;
 
+    public function __construct()
+    {
+        $this->serializer = new Serializer();
+    }
+
+    /**
+     * 
+     * @param \App\Interesant $interesant
+     * @return string | bool
+     */
     public function save(Interesant $interesant)
     {
-        if (!file_exists($this->file)) {
-            return false;
-        }
-        $serializer = new Serializer();
-        $id = $interesant->getId();
-        $rows = [];
-        file_put_contents($this->fileTemp, '');
-        $handle = fopen($this->file, 'r+');
-        $found = false;
-        while(($line = fgets($handle, 4096)) !== false){
-            $item = new Interesant();
-            $itemData = $this->unescape(str_getcsv($line)[0]);
-            $item = $serializer->unserialize($itemData, Interesant::class, $item);
-            if ($item->getId() !== $id) {
-                file_put_contents($this->fileTemp, $line, FILE_APPEND);
-                continue;
+        $rows = json_decode(file_get_contents($this->file), true);
+        $data = $this->serializer->normalize($interesant);
+        $foundKey = false;
+        foreach($rows as $key => $item){
+            if($item['id'] == $interesant->getId()){
+                $foundKey = $key;
+                break;
             }
-            $found = true;
         }
-        fclose($handle);
-        $data = $this->escape(json_encode($serializer->normalize($interesant)));
-        if(!$found){
-            if(($result = file_put_contents($this->file, $data, FILE_APPEND)) === false){
-                return false;
-            }
-            return $id;
+        if(false !== $foundKey){
+            unset($rows[$foundKey]);
         }
-        if(($result = file_put_contents($this->fileTemp, $data, FILE_APPEND)) === false){
-            return false;
-        }
-        rename($this->file, $this->fileOld);
-        rename($this->fileTemp, $this->file);        
-        return $id;
+        $rows[] = $data;
+        
+        file_put_contents($this->file, json_encode($rows));
+        return $interesant->getId();        
     }
 
     /**
@@ -55,17 +47,12 @@ class InteresantRepo
      */
     public function find($id)
     {
-        $serializer = new Serializer();
-        $handle = fopen($this->file, 'r+');
-        while(($line = fgets($handle, 4096)) !== false){
-            $item = new Interesant();
-            $itemData = $this->unescape(str_getcsv($line)[0]);
-            $item = $serializer->unserialize($itemData, Interesant::class, $item);
-            if ($item->getId() === $id) {
-                fclose($handle);
-                return $item;
+        $rows = json_decode(file_get_contents($this->file), true);
+        foreach($rows as $item){
+            if($item['id'] == $id){
+                return $this->serializer->unserialize($item, Interesant::class);
             }
-        }
+        } 
         return null;
     }
     /**
@@ -74,27 +61,11 @@ class InteresantRepo
      */
     public function findAll()
     {
-        $serializer = new Serializer();
-        $handle = fopen($this->file, 'r+');
-        $items = [];
-        while(($line = fgets($handle, 4096)) !== false){
-            $item = new Interesant();
-            $itemData = $this->unescape(str_getcsv($line)[0]);
-            $item = $serializer->unserialize($itemData, Interesant::class, $item);
-            $items[] = $item;
-        }
-        fclose($handle);
-        return $items;
-    }
-    
-    private function escape($line)
-    {
-        return '"' . str_replace('"', '\"', $line) . '"' . PHP_EOL;
-
-    }
-    private function unescape($line)
-    {
-        return str_replace('\"', '"', $line);
-
-    }    
+        $rows = json_decode(file_get_contents($this->file), true);
+        $results = [];
+        foreach($rows as $item){
+            $results[] =  $this->serializer->unserialize($item, Interesant::class);
+        } 
+        return $results;
+    }   
 }

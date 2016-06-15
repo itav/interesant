@@ -19,7 +19,8 @@ class InteresantController
         foreach ($interesants as $interesant){
             $vars[] = $serializer->normalize($interesant);
         }
-        return json_encode($vars);
+        var_dump($vars);
+        return '';
     }
     
     public function formAction()
@@ -33,15 +34,13 @@ class InteresantController
     public function addAction(Application $app, $id = null)
     {
         $interesant = new Interesant();
-        $address1 = new Address();
-        $address2 = new Address();
-        $address2->setType(Address::TYPE_POST);
-        $interesant->setAddresses([$address1, $address2]);
+        $address = new Address();
+        $interesant->addAddress($address);
         if ($id) {
             $repo = new InteresantRepo();
             $interesant = $repo->find($id);
         }
-
+        
         $form = $this->prepareAddForm($app, $interesant);
 
         $serializer = new Serializer();
@@ -49,20 +48,41 @@ class InteresantController
         return $app['templating']->render('page.php', array('form' => $formNorm));
     }
 
-    public function saveAction(Application $app, Request $request, $id = null)
+    public function saveAction(Application $app, Request $request)
     {
         $interesantData = $request->get('interesant');
-        $addressesData = $request->get('addresses');
+        $submit = $request->get('submit');
+
         $serializer = new Serializer();
         $interesant = new Interesant();
-        $addresses = new Addresses();
         $interesant = $serializer->unserialize($interesantData, Interesant::class, $interesant);
-        $addresses = $serializer->unserialize($addressesData, Address::class . '[]');
-        $interesant->setAddresses($addresses);
+        if (isset($submit['add_position'])) {
+            $address = new Address();
+            $interesant->addAddress($address);
+            $form = $this->prepareAddForm($app, $interesant);
+            $formNorm = $serializer->normalize($form);
+            return $app['templating']->render('page.php', array('form' => $formNorm));
+        }
+        if (isset($submit['remove_item'])) {
+            $index = $submit['remove_item'];
+            if(count($interesant->getAddresses()) > 1 ){
+                $interesant->delAddress($index);
+                $interesant->reindexAddresses();
+            }
+            $form = $this->prepareAddForm($app, $interesant);
+            $formNorm = $serializer->normalize($form);
+            return $app['templating']->render('page.php', array('form' => $formNorm));
+        }        
         $valid = $this->validateInteresant($interesant);
         if ($valid) {
             $repo = new InteresantRepo();
             $savedId = $repo->save($interesant);
+            if($request->headers->get('Accept') == 'application/json') {
+                if(!$savedId){
+                    return $app->json(['msg' => 'fail'], 404);
+                }
+                return $app->json(['msg' => 'ok']);
+            }
             var_dump($savedId);
             return '';
         }
@@ -71,15 +91,18 @@ class InteresantController
         return $app['templating']->render('page.php', array('form' => $formNorm));
     }
 
-    public function infoAction(Application $app, $id)
+    public function infoAction(Application $app, Request $request, $id)
     {
         $serializer = new Serializer();
         $repo = new InteresantRepo();
         $interesant = $repo->find($id);
-
+        if($request->headers->get('Accept') == 'application/json') {
+            return $app->json($serializer->normalize($interesant));
+        }
         $form = $this->prepareAddForm($app, $interesant);
         $form->removeSubmits();
         $formNorm = $serializer->normalize($form);
+
         return $app['templating']->render('page.php', array('form' => $formNorm));
     }
 
@@ -108,8 +131,8 @@ class InteresantController
                 ->setLabel('Type:')
                 ->setName('interesant[type]')
                 ->setOptions([
-                    new Form\Option('Private', Interesant::TYPE_PRIVATE, ($interesant->getType() === Interesant::TYPE_PRIVATE)),
-                    new Form\Option('Company', Interesant::TYPE_COMPANY, ($interesant->getType() === Interesant::TYPE_COMPANY))
+                    new Form\Option('Private', Interesant::TYPE_PRIVATE, ($interesant->getType() == Interesant::TYPE_PRIVATE)),
+                    new Form\Option('Company', Interesant::TYPE_COMPANY, ($interesant->getType() == Interesant::TYPE_COMPANY))
         ]);
 
         $name = new Form\Input();
@@ -135,7 +158,7 @@ class InteresantController
                 ->setLabel('Ten:')
                 ->setName('interesant[ten]')
                 ->setValue($interesant->getTen());
-
+              
         $submit = new Form\Button();
         $submit
                 ->setLabel('Zapisz')
@@ -143,8 +166,25 @@ class InteresantController
 
         $fs1 = new Form\FieldSet();
         $fs1->setElements([$id, $type, $name, $firstName, $lastName, $ten]);
+        
+        $addButton = new Form\Button();
+        $addButton
+                ->setLabel('Add position')
+                ->setType(Form\Button::TYPE_SUBMIT)
+                ->setName('submit[add_position]');
+        
         $fs2 = $this->prepareAddressForm($interesant);
+        $fs2->addElement($addButton);
+        
+        $bank = new Form\Input();
+        $bank
+                ->setLabel('Bank Account:')
+                ->setName('interesant[bank_account]')
+                ->setValue($interesant->getBankAccount()); 
 
+        $fs3 = new Form\FieldSet();
+        $fs3->addElement($bank);
+        
         $form = new Form\Form();
         $form
                 ->setName('interesantAdd')
@@ -154,6 +194,7 @@ class InteresantController
         $form
                 ->addElement($fs1)
                 ->addElement($fs2)
+                ->addElement($fs3)
                 ->addElement($submit);
         return $form;
     }
@@ -166,32 +207,40 @@ class InteresantController
             $type = new Form\Select();
             $type
                     ->setLabel('Type:')
-                    ->setName("addresses[$i][type]")
+                    ->setName("interesant[addresses][$i][type]")
                     ->setOptions([
-                        new Form\Option('Main', Address::TYPE_MAIN, $address->getType() === Address::TYPE_MAIN),
-                        new Form\Option('Post', Address::TYPE_POST, $address->getType() === Address::TYPE_POST)
+                        new Form\Option('Main', Address::TYPE_MAIN, $address->getType() == Address::TYPE_MAIN),
+                        new Form\Option('Post', Address::TYPE_POST, $address->getType() == Address::TYPE_POST),
+                        new Form\Option('Other', Address::TYPE_OTHER, $address->getType() == Address::TYPE_OTHER)
             ]);
 
             $street = new Form\Input();
             $street
                     ->setLabel('Street:')
-                    ->setName("addresses[$i][street]")
+                    ->setName("interesant[addresses][$i][street]")
                     ->setValue($address->getStreet());
 
             $zip = new Form\Input();
             $zip
                     ->setLabel('Zip:')
-                    ->setName("addresses[$i][zip]")
+                    ->setName("interesant[addresses][$i][zip]")
                     ->setValue($address->getZip());
 
             $city = new Form\Input();
             $city
                     ->setLabel('City:')
-                    ->setName("addresses[$i][city]")
+                    ->setName("interesant[addresses][$i][city]")
                     ->setValue($address->getCity());
             
+            $removeButton = new Form\Button();
+            $removeButton
+                    ->setLabel('Remove')
+                    ->setType(Form\Button::TYPE_SUBMIT)
+                    ->setName("submit[remove_item]")
+                    ->setValue($i);            
+            
             $fsItem = new Form\FieldSet();
-            $fsItem->setElements([$type, $street, $zip, $city]);
+            $fsItem->setElements([$type, $street, $zip, $city, $removeButton]);
             $fs->addElement($fsItem);
             $i++;
         }

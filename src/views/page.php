@@ -1,9 +1,9 @@
 <?php $view->extend('layout.php') ?>
 
-<?php $view['slots']->set('title', $title) ?>
+<?php $view['slots']->set('title', 'Interesant') ?>
 
 <h1>
-    <?php echo $title ?>
+    <?php echo 'Interesant' ?>
 </h1>
 <p>
     <?php echo $view->render($form['template'], ['data' => $form]) ?>
