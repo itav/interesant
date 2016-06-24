@@ -4,7 +4,8 @@
         "itav/mysql": "~2.1",
         "itav/serializer": "~0.1",
         "itav/form": "~0.3",
-        "symfony/templating": "^3.0"
+        "symfony/templating": "^3.0",
+        "itav/table": "^0.1.0"
     },
     "autoload" : {
         "psr-4" : {

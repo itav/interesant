@@ -6,21 +6,33 @@ use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
 use Itav\Component\Serializer\Serializer;
 use Itav\Component\Form;
+use Itav\Component\Table;
 
 class InteresantController
 {
 
-    public function listAction(Request $request)
+    public function listAction(Application $app, Request $request)
     {
         $serializer = new Serializer();
         $repo = new InteresantRepo();
         $interesants = $repo->findAll();
-        $vars = [];
+        $table = new Table\Table();
         foreach ($interesants as $interesant){
-            $vars[] = $serializer->normalize($interesant);
+            $id = $interesant->getId();
+            $actions = "<a href='/info/$id'>info</a>&nbsp"
+                . "<a href='/edit/$id'>edit</a>&nbsp"
+                . "<a href='/del/$id'>del</a>";
+            $row = new Table\Tr();
+            $row->setElements([
+                new Table\Td($interesant->getName(). ' ' . $interesant->getLastName() . ' ' . $interesant->getFirstName()),
+                new Table\Td($interesant->getAddresses()[0]->getCity()),
+                new Table\Td($interesant->getTen()),
+                new Table\Td($actions),
+            ]);
+            $table->addElement($row);
         }
-        var_dump($vars);
-        return '';
+        $table = $serializer->normalize($table);
+        return $app['templating']->render('list.php', array('table' => $table));
     }
     
     public function formAction()
