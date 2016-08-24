@@ -1,5 +1,6 @@
 /vendor/
 /nbproject/
+.idea/
 /test/
 /src/storage/
 composer.lock
