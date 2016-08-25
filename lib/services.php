@@ -24,3 +24,15 @@ $app['templating'] = function($app) {
     $templating->set(new SlotsHelper());
     return $templating;
 };
+
+$app->register(new Silex\Provider\TwigServiceProvider(), array(
+    'twig.path' => $app['twig_dirs'],
+    'debug' => true,
+    'cache' => '../app/cache/'
+
+));
+
+$app->register(new Silex\Provider\LocaleServiceProvider());
+$app->register(new Silex\Provider\TranslationServiceProvider(), array(
+    'locale_fallbacks' => array('pl'),
+));

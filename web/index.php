@@ -1,11 +1,23 @@
 <?php
+namespace {
+    require_once __DIR__ . '/../vendor/autoload.php';
+}
 
-require_once __DIR__.'/../vendor/autoload.php';
+namespace Silex {
 
-$app = new Silex\Application();
-$app['debug'] = true;
+    use Silex\Application\TranslationTrait;
 
-require_once __DIR__ . '/../lib/routes.php';
-require_once __DIR__ . '/../lib/services.php';
+    class App extends Application
+    {
+        use TranslationTrait;
+    }
 
-$app->run();
+    $app = new App();
+    $app['debug'] = true;
+
+    require_once __DIR__ . '/../lib/routes.php';
+    require_once __DIR__ . '/../lib/services.php';
+
+    $app->run();
+}
+
